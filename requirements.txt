@@ -1,0 +1,33 @@
+# Retro game environment (official gym-retro for Python 3.7)
+gym-retro
+
+# Gym (compatible with Python 3.7)
+gym==0.25.2
+
+# Shimmy - required for SB3 to work with gym environments
+shimmy>=0.2.1
+
+# Stable Baselines3 for RL algorithms (compatible version for Python 3.7)
+stable-baselines3==1.6.2
+
+# Deep learning (PyTorch for Python 3.7)
+torch==1.13.1
+torchvision==0.14.1
+
+# Core dependencies
+numpy<1.24.0
+opencv-python
+
+# Visualization and logging
+matplotlib<3.6.0
+tensorboard>=2.10.0,<2.15.0
+tqdm
+rich
+
+# Video recording
+pygame
+
+# Utilities
+pillow<10.0.0
+pandas<2.0.0
+seaborn
