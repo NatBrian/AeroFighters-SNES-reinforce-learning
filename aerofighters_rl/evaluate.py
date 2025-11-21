@@ -68,17 +68,9 @@ def evaluate_model(
     print("Creating environment...")
     if record_video:
         os.makedirs(video_folder, exist_ok=True)
-        # Wrap in DummyVecEnv for video recording
-        env = DummyVecEnv([lambda: make_aerofighters_env(rank=0)])
-        env = VecVideoRecorder(
-            env,
-            video_folder,
-            record_video_trigger=lambda x: x == 0,
-            video_length=video_length,
-            name_prefix="aerofighters_eval"
-        )
-    else:
-        env = make_aerofighters_env(rank=0)
+    
+    # Create environment
+    env = make_aerofighters_env(rank=0)
     
     print("[OK] Environment created\n")
     
@@ -97,6 +89,12 @@ def evaluate_model(
         episode_reward = 0
         episode_length = 0
         done = False
+        
+        # Video writer for this episode
+        video_writer = None
+        if record_video:
+            video_path = os.path.join(video_folder, f"aerofighters_eval_ep{episode+1}.mp4")
+            # Will initialize writer on first frame to get dimensions
         
         print(f"Episode {episode + 1}/{n_episodes}")
         
@@ -125,8 +123,8 @@ def evaluate_model(
             episode_reward += reward
             episode_length += 1
             
-            # Render if enabled
-            if render and not record_video:
+            # Render if enabled or recording
+            if render or record_video:
                 # Try to get high-quality screen
                 frame = None
                 
@@ -157,9 +155,20 @@ def evaluate_model(
                 # Resize
                 frame = cv2.resize(frame, (512, 448), interpolation=cv2.INTER_NEAREST)
                 
-                cv2.imshow('AeroFighters Agent', frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    done = True
+                # Record video frame
+                if record_video:
+                    if video_writer is None:
+                        height, width = frame.shape[:2]
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        video_writer = cv2.VideoWriter(video_path, fourcc, 60.0, (width, height))
+                    
+                    video_writer.write(frame)
+                
+                # Show window
+                if render:
+                    cv2.imshow('AeroFighters Agent', frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        done = True
             
             if done:
                 score = info.get('score', 0)
@@ -168,8 +177,12 @@ def evaluate_model(
                 print(f"  Reward: {episode_reward:.2f}")
                 print(f"  Length: {episode_length}")
                 print(f"  Score: {score}")
+                print(f"  Score: {score}")
                 print()
                 break
+        
+        if video_writer is not None:
+            video_writer.release()
         
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)

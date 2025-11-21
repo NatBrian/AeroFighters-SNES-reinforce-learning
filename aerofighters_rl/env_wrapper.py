@@ -172,6 +172,20 @@ class RewardShaping(gym.Wrapper):
         return obs, shaped_reward, done, info
 
 
+
+class RenderModeWrapper(gym.Wrapper):
+    """
+    Explicitly adds render_mode attribute for SB3 compatibility.
+    """
+    def __init__(self, env, render_mode: str = "rgb_array"):
+        super().__init__(env)
+        self._render_mode = render_mode
+
+    @property
+    def render_mode(self):
+        return self._render_mode
+
+
 def make_aerofighters_env(
     rank: int = 0,
     frame_skip: int = 4,
@@ -219,6 +233,9 @@ def make_aerofighters_env(
     
     # Seed the environment (gym 0.25 uses env.seed() not reset(seed=...))
     env.seed(rank)
+    
+    # Wrap with RenderModeWrapper for SB3 compatibility
+    env = RenderModeWrapper(env, render_mode="rgb_array")
     
     return env
 
