@@ -198,6 +198,30 @@ The agent will gradually learn to:
 3. Collect power-ups
 4. Survive longer and achieve higher scores
 
+### NEAT (NeuroEvolution) Training
+
+To train using the NEAT evolutionary algorithm:
+
+```bash
+# Basic training
+python -m aerofighters_rl.train_neat
+
+# Train with rendering (watch the agents)
+python -m aerofighters_rl.train_neat --render
+
+# Train for more generations
+python -m aerofighters_rl.train_neat --generations 100
+```
+
+**Note on NEAT Features**:
+Currently, the NEAT implementation is simpler than the PPO one:
+- **Single Environment**: Runs one game at a time (slower than PPO's parallel training).
+- **Console Logging**: Progress is printed to the terminal, not TensorBoard.
+- **Checkpoints**: Saves `neat-checkpoint-N` files and a final `winner.pkl` in the `neat/` directory.
+- **Visualization**: Use `--render` to watch; video recording is not yet implemented.
+
+This will evolve a population of agents. The best genome will be saved to `neat/winner.pkl`.
+
 ---
 
 ## Evaluation

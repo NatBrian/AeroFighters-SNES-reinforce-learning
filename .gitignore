@@ -3,6 +3,8 @@ models
 logs
 plots
 AeroFighters-Snes.sfc
+neat
+videos
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

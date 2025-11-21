@@ -235,6 +235,88 @@ class EpisodeStatsCallback(BaseCallback):
         }
 
 
+def render_game_frame(
+    env: gym.Env,
+    observation: Optional[np.ndarray] = None,
+    window_name: str = "AeroFighters Training",
+    info_text: Optional[str] = None,
+) -> None:
+    """
+    Render a game frame with high quality from the retro environment.
+    This is a reusable rendering function for any RL algorithm.
+    
+    Args:
+        env: The game environment (wrapped or unwrapped)
+        observation: Optional observation to use as fallback if screen can't be retrieved
+        window_name: Name of the OpenCV window
+        info_text: Optional text to display on the frame
+    """
+    import cv2
+    
+    frame = None
+    
+    # Try to get the original screen from the environment
+    # Unwrap to find the Retro environment
+    unwrapped_env = env
+    while hasattr(unwrapped_env, 'env'):
+        if hasattr(unwrapped_env, 'get_screen'):
+            try:
+                frame = unwrapped_env.get_screen()
+                break
+            except:
+                pass
+        unwrapped_env = unwrapped_env.env
+    
+    # If we found the retro env but get_screen didn't work
+    if frame is None and hasattr(unwrapped_env, 'em'):
+        try:
+            frame = unwrapped_env.get_screen()
+        except:
+            pass
+    
+    # Fallback: Use observation if we can't get the original screen
+    if frame is None and observation is not None:
+        frame = observation
+        # Handle different observation formats
+        # Handle channel-first format (C, H, W)
+        if len(frame.shape) == 3:
+            if frame.shape[0] == 4:  # Stacked frames, channel first
+                frame = frame[-1, :, :]
+            elif frame.shape[0] == 1:
+                frame = frame[0, :, :]
+            # Handle channel-last format (H, W, C)
+            elif frame.shape[2] == 4:  # Stacked frames, channel last
+                frame = frame[:, :, -1]
+        
+        # Convert grayscale observation to BGR for display
+        frame = np.ascontiguousarray(frame, dtype=np.uint8)
+        if len(frame.shape) == 2:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        elif len(frame.shape) == 3 and frame.shape[2] == 3:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        # Resize to 512x448 (2x SNES resolution)
+        frame = cv2.resize(frame, (512, 448), interpolation=cv2.INTER_NEAREST)
+    else:
+        # We got the high-quality frame!
+        # It's usually RGB, convert to BGR for OpenCV
+        if frame is not None:
+            if len(frame.shape) == 3 and frame.shape[2] == 3:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
+            # Resize to 2x for visibility (SNES is 256x224 -> 512x448)
+            frame = cv2.resize(frame, (512, 448), interpolation=cv2.INTER_NEAREST)
+    
+    if frame is not None:
+        # Add info text if provided
+        if info_text:
+            cv2.putText(frame, info_text, (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        cv2.imshow(window_name, frame)
+        cv2.waitKey(1)
+
+
 class RenderingCallback(BaseCallback):
     """
     Callback to render the environment during training.
@@ -244,67 +326,27 @@ class RenderingCallback(BaseCallback):
         self.window_name = 'AeroFighters Training'
         
     def _on_step(self) -> bool:
-        import cv2
+        # Get observation from the training environment
+        obs = self.locals.get('new_obs')
+        observation = obs[0] if obs is not None else None
         
-        # Try to get the original screen from the environment
-        frame = None
-        
-        # Check if we can access the underlying environment (DummyVecEnv)
+        # Get the environment (handle vectorized environments)
+        env = None
         if hasattr(self.training_env, 'envs'):
-            # Get the first environment
             env = self.training_env.envs[0]
-            
-            # Unwrap to find the Retro environment
-            while hasattr(env, 'env'):
-                if hasattr(env, 'get_screen'):
-                    frame = env.get_screen()
-                    break
-                env = env.env
-            
-            # If we found the retro env but get_screen didn't work or wasn't found
-            if frame is None and hasattr(env, 'em'):
-                 # Direct access to emulator if possible
-                 frame = env.get_screen()
-        
-        # Fallback: Use observation if we can't get the original screen
-        if frame is None:
-            obs = self.locals.get('new_obs')
-            if obs is not None:
-                frame = obs[0]
-                # Handle channel-first format (C, H, W)
-                if frame.shape[0] == 4:
-                    frame = frame[-1, :, :]
-                elif frame.shape[0] == 1:
-                    frame = frame[0, :, :]
-                # Handle channel-last format (H, W, C)
-                elif len(frame.shape) == 3 and frame.shape[2] == 4:
-                    frame = frame[:, :, -1]
-                
-                # Convert grayscale observation to BGR for display
-                frame = np.ascontiguousarray(frame, dtype=np.uint8)
-                if len(frame.shape) == 2:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                elif len(frame.shape) == 3 and frame.shape[2] == 3:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                
-                # Resize observation to be larger
-                frame = cv2.resize(frame, (512, 448), interpolation=cv2.INTER_NEAREST)
         else:
-            # We got the high-quality frame!
-            # It's usually RGB, convert to BGR for OpenCV
-            if len(frame.shape) == 3 and frame.shape[2] == 3:
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            
-            # Resize to 2x for visibility (SNES is 256x224 -> 512x448)
-            frame = cv2.resize(frame, (512, 448), interpolation=cv2.INTER_NEAREST)
-
-        if frame is not None:
-            # Add info text
-            cv2.putText(frame, f"Step: {self.num_timesteps}", (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            
-            cv2.imshow(self.window_name, frame)
-            cv2.waitKey(1)
+            env = self.training_env
+        
+        # Prepare info text
+        info_text = f"Step: {self.num_timesteps}"
+        
+        # Use the reusable rendering function
+        render_game_frame(
+            env=env,
+            observation=observation,
+            window_name=self.window_name,
+            info_text=info_text
+        )
             
         return True
         
