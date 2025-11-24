@@ -1,6 +1,8 @@
 # AeroFighters SNES PPO Agent (Gym Retro)
 
-A complete reinforcement learning project that trains a Proximal Policy Optimization (PPO) agent to play the SNES game **AeroFighters** using Gym Retro. This project emphasizes **visualization** of the learning process with detailed metrics, reports, and graphs.
+A complete reinforcement learning project that trains a Proximal Policy Optimization (PPO) agent to play the SNES game **AeroFighters** using Gym Retro.
+
+![aerofighters_eval_ep_5.gif](assets/aerofighters_eval_ep_5.gif)
  
 **Gym Retro Documentation**: https://retro.readthedocs.io/en/latest/getting_started.html
 
@@ -218,7 +220,7 @@ Currently, the NEAT implementation is simpler than the PPO one:
 - **Single Environment**: Runs one game at a time (slower than PPO's parallel training).
 - **Console Logging**: Progress is printed to the terminal, not TensorBoard.
 - **Checkpoints**: Saves `neat-checkpoint-N` files and a final `winner.pkl` in the `neat/` directory.
-- **Visualization**: Use `--render` to watch; video recording is not yet implemented.
+- **Visualization**: Use `--render` to watch.
 
 This will evolve a population of agents. The best genome will be saved to `neat/winner.pkl`.
 
